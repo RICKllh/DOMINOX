@@ -1,0 +1,783 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dominox Elemental</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Alegreya+Sans:wght@400;500;700;800&display=swap">
+<style>
+/* Layout: game table — rivals strip on top, leather table with the chain in the middle, your hand docked (sticky) at the bottom */
+:root{
+  color-scheme: dark;
+  --stone:#121015; --stone-2:#1b1820; --ink:#efe6d6; --muted:#a99c88;
+  --gold:#c9a25c; --gold-dim:rgba(201,162,92,.35);
+  --leather:#4a2c1a; --wood:#5b3a22; --tile:#17141a; --tile-2:#0e0c10;
+  --good:#7ee08a; --bad:#ff7a6b;
+  --f-display:"Cinzel", "Trajan Pro", Georgia, serif;
+  --f-body:"Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+  --tw: 116px;   /* hand tile width */
+  --bw: 86px;    /* board tile width */
+}
+@media (max-width: 640px){ :root{ --tw: 80px; --bw: 62px; } }
+*{box-sizing:border-box} [hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--stone); color:var(--ink); font-family:var(--f-body); font-size:16px; line-height:1.45; -webkit-tap-highlight-color:transparent;
+  background-image: radial-gradient(1200px 600px at 50% -10%, #2a2230 0%, transparent 60%), radial-gradient(800px 400px at 50% 110%, #22161b 0%, transparent 60%);}
+button{font:inherit; color:inherit}
+.wrap{max-width:1100px; margin:0 auto; padding-inline:16px; padding-block:12px 0; display:flex; flex-direction:column; gap:12px; min-height:100%}
+
+/* header */
+header{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap}
+.brand{display:flex; flex-direction:column; min-width:0}
+.brand h1{font-family:var(--f-display); font-weight:900; font-size:clamp(20px,3.4vw,32px); letter-spacing:.06em; margin:0; line-height:1.05;
+  background:linear-gradient(180deg,#ffe7b0 0%, var(--gold) 55%, #8a6630 100%); -webkit-background-clip:text; background-clip:text; color:transparent}
+.brand small{font-family:var(--f-display); font-size:11px; letter-spacing:.24em; text-transform:uppercase; color:var(--muted)}
+.hbtns{display:flex; gap:6px; flex-wrap:wrap; align-items:center}
+.btn{border:1px solid var(--gold-dim); background:linear-gradient(#231f28,#17141b); padding:9px 14px; border-radius:10px; cursor:pointer; font-weight:700; letter-spacing:.02em; transition:border-color .2s, transform .12s, opacity .2s; touch-action:manipulation}
+.btn:hover:not(:disabled){border-color:var(--gold)}
+.btn:active:not(:disabled){transform:scale(.96)}
+.btn:disabled{opacity:.35; cursor:not-allowed}
+.btn.primary{background:linear-gradient(#e0b96b,#a87f3a); color:#1b1206; border-color:#f1d08f}
+.btn.sm{padding:7px 11px; font-size:14px}
+.btn.call{animation:call 1.4s ease-in-out infinite; border-color:#ffe7b0}
+@keyframes call{50%{box-shadow:0 0 0 6px rgba(255,231,176,.12), 0 0 22px rgba(255,231,176,.35)}}
+.btn:focus-visible,.tile:focus-visible,.end:focus-visible{outline:2px solid #ffe7b0; outline-offset:3px}
+.speed{display:flex; border:1px solid var(--gold-dim); border-radius:10px; overflow:hidden}
+.speed button{background:#17141b; border:0; padding:7px 10px; font-size:13px; font-weight:800; cursor:pointer; color:var(--muted)}
+.speed button[aria-pressed=true]{background:#2a2117; color:#ffe7b0}
+
+/* rivals */
+.rivals{display:flex; gap:8px}
+.rival{flex:1 1 0; min-width:0; display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:12px; background:var(--stone-2); border:1px solid #2c2732; transition:border-color .35s, box-shadow .35s, transform .35s}
+.rival.active{border-color:var(--gold); box-shadow:0 0 0 1px var(--gold), 0 0 26px rgba(201,162,92,.28); transform:translateY(-2px)}
+.avatar{width:38px; height:38px; border-radius:50%; display:grid; place-items:center; flex:none; background:#0d0b10; border:1px solid var(--gold-dim); color:var(--c); position:relative}
+.avatar svg{width:22px; height:22px; filter:drop-shadow(0 0 4px var(--c))}
+.avatar .cnt{position:absolute; right:-6px; bottom:-4px; min-width:20px; height:20px; padding:0 5px; border-radius:99px; background:#2a2117; border:1px solid var(--gold); color:#ffe7b0; font-size:12px; font-weight:800; display:grid; place-items:center; font-variant-numeric:tabular-nums}
+.rival .meta{min-width:0; display:flex; flex-direction:column}
+.rival .nm{font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.rival .sub{font-size:13px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.dots{color:var(--gold); font-weight:800; letter-spacing:.08em}
+.dots i{display:inline-block; animation:dot 1s infinite} .dots i:nth-child(2){animation-delay:.15s} .dots i:nth-child(3){animation-delay:.3s}
+@keyframes dot{0%,100%{opacity:.2; transform:translateY(0)} 40%{opacity:1; transform:translateY(-3px)}}
+@media (max-width:640px){
+  .rival{gap:8px; padding:6px 8px} .avatar{width:32px; height:32px} .avatar svg{width:18px; height:18px}
+  .rivals.many .rival .sub{display:none} .rival .sub{font-size:12px}
+  header{gap:8px} .hbtns{width:100%; flex-wrap:nowrap} .hbtns .btn{flex:1} .lg{display:none}
+  .table{min-height:300px; padding:10px} .narr{font-size:14px}
+}
+
+/* table */
+.table{position:relative; border-radius:18px; padding:12px; min-height:340px; display:flex; flex-direction:column; gap:10px; transition:box-shadow .5s;
+  background:
+    repeating-linear-gradient(92deg, rgba(0,0,0,.10) 0 2px, transparent 2px 9px),
+    repeating-linear-gradient(88deg, rgba(255,220,170,.04) 0 1px, transparent 1px 23px),
+    linear-gradient(180deg, #6a4428, var(--wood) 40%, #432914);
+  box-shadow: inset 0 0 0 9px var(--leather), inset 0 0 0 11px rgba(201,162,92,.35), inset 0 0 60px rgba(0,0,0,.6), 0 18px 40px rgba(0,0,0,.5);}
+.table.glow{box-shadow: inset 0 0 0 9px var(--leather), inset 0 0 0 11px rgba(255,240,200,.8), inset 0 0 90px rgba(255,230,180,.25), 0 0 50px rgba(255,230,180,.25)}
+.tablebar{display:flex; justify-content:space-between; align-items:center; gap:10px; padding:6px 8px 0}
+.status{font-family:var(--f-display); font-weight:700; letter-spacing:.04em; font-size:clamp(15px,2.2vw,19px); text-shadow:0 2px 6px rgba(0,0,0,.7); min-width:0}
+.pile{display:flex; align-items:center; gap:8px; font-size:14px; color:#f3e3c4; font-variant-numeric:tabular-nums; text-shadow:0 1px 3px #000; flex:none}
+.pilestack{position:relative; width:26px; height:38px}
+.pilestack i{position:absolute; inset:0; border-radius:4px; background:linear-gradient(#3a2a1c,#20160e); border:1px solid var(--gold-dim)}
+.pilestack i:nth-child(2){transform:translate(3px,-3px)} .pilestack i:nth-child(3){transform:translate(6px,-6px)}
+
+.narr{margin-inline:6px; min-height:44px; display:block; padding:9px 12px; line-height:1.9; border-radius:10px; background:rgba(10,7,6,.6); border:1px solid rgba(201,162,92,.25); font-size:15px; flex-wrap:wrap}
+.narr.in{animation:narrIn .45s ease-out}
+.narr.rx{border-color:#fff3d6; background:rgba(40,30,20,.75)}
+.narr .tile{--w:50px; display:inline-flex; vertical-align:middle; margin-inline:2px} .narr .chip{vertical-align:middle}
+@keyframes narrIn{from{opacity:0; transform:translateY(-6px)}}
+
+.ends{display:grid; grid-template-columns:1fr 1fr; gap:8px; padding-inline:6px}
+.end{display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:12px; background:rgba(14,10,8,.55); border:1px dashed rgba(201,162,92,.4); cursor:default; text-align:left; min-width:0; transition:background .25s, border-color .25s, box-shadow .25s, transform .2s; touch-action:manipulation}
+.end.right{justify-content:flex-end; text-align:right}
+.end .lbl{font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted)}
+.end .acc{display:flex; gap:4px; align-items:center; flex-wrap:wrap; margin-top:3px}
+.end.right .acc{justify-content:flex-end}
+.chip{display:inline-flex; align-items:center; gap:4px; padding:2px 8px 2px 4px; border-radius:99px; background:rgba(0,0,0,.45); border:1px solid color-mix(in srgb, var(--c) 50%, transparent); color:var(--c); font-size:13px; font-weight:700}
+.chip svg{width:16px; height:16px}
+.chip.rxc{background:color-mix(in srgb, var(--c) 18%, rgba(0,0,0,.5)); color:#fff; letter-spacing:.06em}
+.arrow{color:var(--muted); font-size:12px}
+.end.can{border-style:solid; border-color:var(--good); background:rgba(40,70,40,.5); cursor:pointer; box-shadow:0 0 18px rgba(126,224,138,.35); animation:pulse 1.3s ease-in-out infinite}
+.end.can .lbl{color:var(--good)}
+.end.hot{transform:scale(1.04); background:rgba(60,110,60,.7); box-shadow:0 0 30px rgba(126,224,138,.6)}
+@keyframes pulse{50%{box-shadow:0 0 4px rgba(126,224,138,.15)}}
+
+.chainbox{flex:1; display:flex; align-items:center; justify-content:center; padding:8px 4px; min-height:140px}
+.chain{display:flex; flex-wrap:wrap; gap:6px 4px; justify-content:center; align-content:center; max-width:100%}
+
+/* tiles */
+.tile{--w:var(--tw); width:var(--w); height:calc(var(--w) / 2); flex:none; display:flex; border-radius:calc(var(--w) * .08); position:relative; padding:0;
+  background:linear-gradient(170deg, #241f27, var(--tile) 45%, var(--tile-2));
+  border:1px solid #6d5634;
+  box-shadow: inset 0 0 0 3px var(--tile-2), inset 0 0 0 4px rgba(201,162,92,.42), 0 5px 12px rgba(0,0,0,.55);}
+.tile.board{--w:var(--bw)}
+.tile .half{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--c); position:relative; min-width:0; pointer-events:none}
+.tile .half svg{width:56%; height:56%; filter:drop-shadow(0 0 5px var(--c)) drop-shadow(0 0 1px var(--c))}
+.tile .half.rx{background:radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--c) 32%, transparent), transparent 70%); border-radius:inherit}
+.tile .half.rx svg{width:44%; height:44%}
+.tile .half.rx b{font-family:var(--f-display); font-size:max(8px, calc(var(--w) * .078)); letter-spacing:.03em; line-height:1; color:#fff; text-shadow:0 0 6px var(--c); margin-top:2px; max-width:96%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.tile.board .half.rx b, .narr .tile .half.rx b{display:none}
+.tile.board .half.rx svg, .narr .tile .half.rx svg{width:56%; height:56%}
+.tile .sep{width:1px; margin:16% 0; background:linear-gradient(transparent, rgba(201,162,92,.6), transparent); position:relative; pointer-events:none}
+.tile .sep::after{content:""; position:absolute; left:50%; top:50%; width:5px; height:5px; background:var(--gold); transform:translate(-50%,-50%) rotate(45deg); opacity:.8}
+.tile.endL .half:first-child, .tile.endR .half:last-child{box-shadow:inset 0 0 0 2px rgba(255,231,176,.55); border-radius:6px}
+.tile.cat{border-color:#fff3d6; box-shadow: inset 0 0 0 3px var(--tile-2), inset 0 0 0 4px rgba(255,240,200,.7), 0 0 16px rgba(255,240,200,.3), 0 5px 12px rgba(0,0,0,.55)}
+.tile.target{box-shadow: inset 0 0 0 3px var(--tile-2), inset 0 0 0 4px var(--good), 0 0 20px rgba(126,224,138,.55); animation:pulse 1.3s ease-in-out infinite}
+.tile.settle{animation:settle .5s cubic-bezier(.2,1.6,.4,1)}
+@keyframes settle{0%{transform:scale(1.12)} 100%{transform:none}}
+.tile.back{background:linear-gradient(#3a2a1c,#20160e); border-color:var(--gold-dim)}
+.tile.back::after{content:""; position:absolute; inset:22% 40%; border:1px solid var(--gold-dim); transform:rotate(45deg)}
+
+.ghost{position:fixed; left:0; top:0; z-index:50; pointer-events:none; will-change:transform}
+.ghost .tile{box-shadow: inset 0 0 0 3px var(--tile-2), inset 0 0 0 4px rgba(255,231,176,.6), 0 18px 30px rgba(0,0,0,.6), 0 0 22px rgba(255,231,176,.25)}
+.spark{position:fixed; z-index:60; width:8px; height:8px; border-radius:50%; pointer-events:none; left:0; top:0}
+
+/* hand */
+.handzone{position:sticky; bottom:0; z-index:10; margin-inline:-16px; padding:12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); display:flex; flex-direction:column; gap:10px;
+  background:linear-gradient(180deg, rgba(28,24,32,.92), #141117 40%); border-top:1px solid #3a3340; backdrop-filter:blur(8px); box-shadow:0 -12px 30px rgba(0,0,0,.45); border-radius:18px 18px 0 0}
+.handhead{display:flex; justify-content:space-between; align-items:center; gap:10px}
+.handhead h2{margin:0; font-family:var(--f-display); font-size:15px; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); flex:none}
+.handhead .hint{font-size:14px; color:#e6dac6; text-align:right; min-width:0}
+.hand{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; min-height:calc(var(--tw)/2)}
+.hand .tile{cursor:pointer; transition:transform .25s cubic-bezier(.2,.9,.3,1.2), box-shadow .25s, opacity .25s, filter .25s; touch-action:none; user-select:none; -webkit-user-select:none}
+.hand .tile.dim{opacity:.4; filter:saturate(.5)}
+.hand .tile.ok{box-shadow: inset 0 0 0 3px var(--tile-2), inset 0 0 0 4px rgba(126,224,138,.6), 0 0 16px rgba(126,224,138,.28), 0 5px 12px rgba(0,0,0,.55)}
+@media (hover:hover){ .hand .tile.ok:hover{transform:translateY(-5px)} }
+.hand .tile.sel{transform:translateY(-10px) scale(1.04); box-shadow: inset 0 0 0 3px var(--tile-2), inset 0 0 0 4px #ffe7b0, 0 0 26px rgba(255,231,176,.5), 0 10px 18px rgba(0,0,0,.6)}
+.hand .tile.lift{opacity:.15}
+.hand .tile.shake{animation:shake .4s}
+@keyframes shake{20%,60%{transform:translateX(-5px)} 40%,80%{transform:translateX(5px)}}
+.hand .tile .tag{position:absolute; top:-10px; right:-6px; font-size:10px; font-weight:800; letter-spacing:.06em; padding:1px 6px; border-radius:99px; background:#fff3d6; color:#2a1a08; text-transform:uppercase; pointer-events:none}
+.actions{display:flex; gap:8px; justify-content:center}
+.actions .btn{flex:0 1 200px}
+
+details.log{background:var(--stone-2); border:1px solid #2c2732; border-radius:14px; padding:10px 14px; font-size:14px}
+details.log summary{cursor:pointer; font-family:var(--f-display); font-size:13px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted)}
+details.log ol{list-style:none; margin:8px 0 0; padding:0; display:flex; flex-direction:column; gap:4px; max-height:220px; overflow:auto}
+details.log li{color:#d8ccb8} details.log li.rx{color:#fff3d6} details.log li.rx::before{content:"✦ "; color:var(--gold)}
+.foot{font-size:12px; color:#6f6577; text-align:center; letter-spacing:.06em; padding-bottom:8px}
+
+/* banners */
+.toast{position:absolute; left:50%; top:52%; transform:translate(-50%,-50%) scale(.85); opacity:0; pointer-events:none; text-align:center; padding:14px 22px; border-radius:14px;
+  background:rgba(10,8,12,.85); border:1px solid #fff3d6; box-shadow:0 0 40px rgba(255,240,200,.35); transition:opacity .35s, transform .35s cubic-bezier(.2,1.4,.4,1); z-index:5; max-width:92%}
+.toast.show{opacity:1; transform:translate(-50%,-50%) scale(1)}
+.toast .k{font-family:var(--f-display); font-size:11px; letter-spacing:.3em; color:var(--gold)}
+.toast .t{font-family:var(--f-display); font-weight:900; font-size:clamp(18px,3.4vw,28px); letter-spacing:.04em}
+.turnban{position:absolute; left:0; right:0; top:50%; transform:translateY(-50%); text-align:center; pointer-events:none; z-index:4; opacity:0}
+.turnban span{display:inline-block; font-family:var(--f-display); font-weight:900; font-size:clamp(28px,6vw,48px); letter-spacing:.12em; color:#ffe7b0; text-shadow:0 0 24px rgba(255,200,120,.6), 0 4px 10px #000; padding:6px 28px; background:linear-gradient(90deg, transparent, rgba(10,7,6,.75) 20%, rgba(10,7,6,.75) 80%, transparent)}
+.turnban.show{animation:ban 1.3s ease-in-out}
+@keyframes ban{0%{opacity:0; transform:translateY(-50%) scale(.8)} 20%,70%{opacity:1; transform:translateY(-50%) scale(1)} 100%{opacity:0; transform:translateY(-50%) scale(1.05)}}
+
+/* modals */
+.modal{position:fixed; inset:0; background:rgba(6,5,8,.78); display:grid; place-items:center; padding:16px; z-index:80; backdrop-filter:blur(3px)}
+.card{width:min(720px,100%); max-height:92vh; overflow:auto; background:linear-gradient(180deg,#201c25,#151219); border:1px solid var(--gold-dim); border-radius:16px; padding:22px; box-shadow:0 30px 80px rgba(0,0,0,.6); animation:pop .35s cubic-bezier(.2,1.3,.4,1)}
+@keyframes pop{from{opacity:0; transform:scale(.94) translateY(8px)}}
+.card h2{font-family:var(--f-display); margin:0 0 4px; font-size:24px; letter-spacing:.05em; color:#ffe7b0}
+.card h3{font-family:var(--f-display); font-size:15px; letter-spacing:.1em; text-transform:uppercase; color:var(--gold); margin:18px 0 8px}
+.card p{margin:6px 0; color:#ddd1bd; max-width:65ch}
+.row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+.field{display:flex; flex-direction:column; gap:4px; flex:1 1 200px}
+.field label,.field .lab{font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted)}
+input[type=text]{background:#0f0d12; border:1px solid #3a3340; border-radius:10px; padding:11px 12px; font:inherit; color:var(--ink)}
+.seg{display:flex; gap:6px}
+.seg button{flex:1; padding:11px 12px; border-radius:10px; border:1px solid #3a3340; background:#0f0d12; cursor:pointer; font-weight:800}
+.seg button[aria-pressed=true]{border-color:var(--gold); background:#2a2117; color:#ffe7b0}
+.how{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:8px}
+.how div{background:rgba(0,0,0,.25); border-radius:10px; padding:10px; font-size:14px; color:#ddd1bd}
+.how b{display:block; font-family:var(--f-display); color:#ffe7b0; font-size:13px; letter-spacing:.06em; margin-bottom:2px}
+@media (max-width:560px){ .how{grid-template-columns:1fr} }
+.catalog{display:grid; grid-template-columns:repeat(auto-fill, minmax(140px,1fr)); gap:12px}
+.catalog .it{display:flex; flex-direction:column; align-items:center; gap:6px; font-size:13px; color:var(--muted); text-align:center}
+.catalog .tile{--w:120px}
+.rxtable{display:flex; flex-direction:column; gap:8px}
+.rxrow{display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:8px 10px; background:rgba(0,0,0,.25); border-radius:10px; font-size:14px}
+.rxrow .tile{--w:110px}
+.rxrow span{flex:1 1 200px; min-width:0}
+.rank{display:flex; flex-direction:column; gap:6px; margin:10px 0}
+.rank div{display:flex; justify-content:space-between; gap:10px; padding:9px 12px; border-radius:8px; background:rgba(0,0,0,.3); font-variant-numeric:tabular-nums}
+.rank div.win{background:rgba(201,162,92,.18); border:1px solid var(--gold-dim); color:#ffe7b0; font-weight:800}
+@media (prefers-reduced-motion: reduce){ *{animation:none!important; transition:none!important} }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1>DOMINOX ELEMENTAL</h1>
+      <small>Edição Reação em Cadeia</small>
+    </div>
+    <div class="hbtns">
+      <div class="speed" id="speed" aria-label="Velocidade dos adversários">
+        <button data-s="calma" aria-pressed="true">Calma</button><button data-s="rapida" aria-pressed="false">Rápida</button>
+      </div>
+      <button class="btn sm" id="bRules">Regras</button>
+      <button class="btn sm" id="bPieces">Peças</button>
+      <button class="btn sm primary" id="bNew">Nova<span class="lg"> partida</span></button>
+    </div>
+  </header>
+
+  <section class="rivals" id="rivals" aria-label="Adversários"></section>
+
+  <section class="table" id="table" aria-label="Mesa">
+    <div class="tablebar">
+      <div class="status" id="status">Preparando a mesa…</div>
+      <div class="pile" id="pile"><div class="pilestack"><i></i><i></i><i></i></div><span id="pileN">0</span></div>
+    </div>
+    <div class="narr" id="narr" aria-live="polite">Embaralhando as 26 peças…</div>
+    <div class="ends">
+      <button class="end left" id="endL" data-drop="L" disabled><div><div class="lbl">◀ Esquerda</div><div class="acc" id="accL"></div></div></button>
+      <button class="end right" id="endR" data-drop="R" disabled><div><div class="lbl">Direita ▶</div><div class="acc" id="accR"></div></div></button>
+    </div>
+    <div class="chainbox"><div class="chain" id="chain"></div></div>
+    <div class="turnban" id="turnban"><span>SUA VEZ</span></div>
+    <div class="toast" id="toast"><div class="k">REAÇÃO EM CADEIA</div><div class="t" id="toastT"></div></div>
+  </section>
+
+  <section class="handzone" aria-label="Sua mão">
+    <div class="handhead">
+      <h2 id="handTitle">Sua mão</h2>
+      <div class="hint" id="hint"></div>
+    </div>
+    <div class="hand" id="hand"></div>
+    <div class="actions">
+      <button class="btn" id="bDraw">Comprar peça</button>
+      <button class="btn" id="bPass">Passar a vez</button>
+    </div>
+  </section>
+
+  <details class="log"><summary>Diário da partida</summary><ol id="log"></ol></details>
+  <div class="foot">Protótipo digital · Dominox S.A. · Desafio de Inovação CIEE</div>
+</div>
+
+<!-- setup -->
+<div class="modal" id="mSetup">
+  <div class="card">
+    <h2>Dominox Elemental</h2>
+    <p>O dominó clássico com forças da natureza no lugar dos pontos. Ligue elementos iguais, provoque reações e seja o primeiro a esvaziar a mão.</p>
+    <div class="how">
+      <div><b>Arraste ou toque</b>Peças que brilham em verde encaixam. Arraste até a mesa ou toque nelas.</div>
+      <div><b>Provoque reações</b>Fogo numa ponta de Água vira VAPOR. A ponta muda e aceita outros elementos.</div>
+      <div><b>Esvazie a mão</b>Sem jogada, compre do monte. Vence quem ficar sem peças primeiro.</div>
+    </div>
+    <h3>Nova partida</h3>
+    <div class="row">
+      <div class="field"><label for="iName">Seu nome</label><input type="text" id="iName" value="Jogador" maxlength="14"></div>
+      <div class="field"><span class="lab">Jogadores na mesa</span>
+        <div class="seg" id="segN"><button data-n="2" aria-pressed="true">2</button><button data-n="3" aria-pressed="false">3</button><button data-n="4" aria-pressed="false">4</button></div>
+      </div>
+    </div>
+    <div class="row" style="justify-content:flex-end; margin-top:16px">
+      <button class="btn" data-open="mRules">Regras completas</button>
+      <button class="btn primary" id="bStart">Começar partida</button>
+    </div>
+  </div>
+</div>
+
+<!-- rules -->
+<div class="modal" id="mRules" hidden>
+  <div class="card">
+    <h2>Manual de regras</h2>
+    <p>Objetivo: descartar todas as peças da mão primeiro. Se a mesa trancar, vence quem tiver menos peças.</p>
+    <h3>1 · Preparação</h3>
+    <p>As 26 peças são embaralhadas. Com 2 ou 3 jogadores cada um recebe 6 peças; com 4, recebe 5. Uma peça do monte abre a mesa com duas pontas.</p>
+    <h3>2 · Jogada padrão</h3>
+    <p>Ligue uma peça cujo elemento seja igual ao da ponta aberta. Uma ponta com Fogo recebe qualquer peça que tenha uma metade de Fogo.</p>
+    <h3>3 · Peça catalisadora (reação)</h3>
+    <p>As 6 peças de reação também podem ser ligadas ao elemento que reage com elas. A ponta passa a mostrar a reação, que aceita dois elementos.</p>
+    <div class="rxtable" id="rxTable"></div>
+    <h3>4 · Compra</h3>
+    <p>Sem jogada válida, compre 1 peça do monte. Se ela servir, pode jogá-la; se não, passe a vez. Com o monte vazio, apenas passe.</p>
+    <div class="row" style="justify-content:flex-end; margin-top:14px"><button class="btn primary" data-close>Entendi</button></div>
+  </div>
+</div>
+
+<!-- pieces -->
+<div class="modal" id="mPieces" hidden>
+  <div class="card">
+    <h2>Composição do conjunto</h2>
+    <p>26 peças balanceadas em três grupos.</p>
+    <h3>Grupo A · 15 peças elementais comuns</h3><div class="catalog" id="catA"></div>
+    <h3>Grupo B · 6 peças de reação</h3><div class="catalog" id="catB"></div>
+    <h3>Grupo C · 5 peças âncora</h3><div class="catalog" id="catC"></div>
+    <div class="row" style="justify-content:flex-end; margin-top:14px"><button class="btn primary" data-close>Fechar</button></div>
+  </div>
+</div>
+
+<!-- end -->
+<div class="modal" id="mEnd" hidden>
+  <div class="card" style="width:min(460px,100%)">
+    <h2 id="endTitle">Fim de partida</h2>
+    <p id="endSub"></p>
+    <div class="rank" id="endRank"></div>
+    <div class="row" style="justify-content:flex-end"><button class="btn" data-close>Ver a mesa</button><button class="btn primary" id="bAgain">Jogar de novo</button></div>
+  </div>
+</div>
+
+<script>
+/* ---------- icons ---------- */
+const ICON = {
+  fogo:'<path fill="currentColor" d="M16 2.5c1.2 5.3 8 8.2 8 15.6A8 8 0 0 1 8 18.4c0-4.3 2.3-6.8 3.6-8.7.2 3.3 1.3 5.3 3.4 5.9-1.2-5.2.2-9.6 1-13.1z"/><path fill="#fff" opacity=".75" d="M16.2 17c.6 2.4 3.3 3.2 3.3 6.1a3.5 3.5 0 0 1-7 .1c0-2 1.2-3.1 1.9-4 .2 1.2.7 1.9 1.4 2.1-.4-1.8 0-3.3.4-4.3z"/>',
+  agua:'<path fill="currentColor" d="M16 2.5C12.3 9.6 7.5 14 7.5 20.3a8.5 8.5 0 0 0 17 0C24.5 14 19.7 9.6 16 2.5z"/><path fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity=".8" d="M12.5 21.5a4 4 0 0 0 6.8 2.4c1.5-1.6 1-4.2-1-4.8-1.6-.5-3 .9-2.3 2.3"/>',
+  raio:'<path fill="currentColor" d="M18.7 2 6.8 18.2h7.6L12.3 30l12.4-17.4h-7.8z"/>',
+  terra:'<path fill="#8a6a46" d="M4 25.5 8.5 14l6.5-4.5 7.5 2 5.5 7.5-1 6.5z"/><path fill="currentColor" d="M8.5 14l6.5-4.5 7.5 2 5.5 7.5c-3-1.8-5.5-2.6-8-1.6-2.6 1-5-1.7-7.2-.4-1.8 1-3.2 1-4.3-3z"/><path fill="none" stroke="#3b2a18" stroke-width="1.2" d="M11 25l3-6 5 3 4-4"/>',
+  gelo:'<g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M16 3v26M4.7 9.5l22.6 13M4.7 22.5l22.6-13"/><path d="M12.5 5.5 16 9l3.5-3.5M12.5 26.5 16 23l3.5 3.5M5 14.6l4.8-1.3-1.3-4.8M27 17.4l-4.8 1.3 1.3 4.8M5 17.4l4.8 1.3-1.3 4.8M27 14.6l-4.8-1.3 1.3-4.8"/></g>',
+  ar:'<g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M3.5 12.5h15.5a4 4 0 1 0-4-4"/><path d="M3.5 18.5h20a4 4 0 1 1-4 4"/><path d="M3.5 24.5h8"/></g>',
+  vapor:'<path fill="currentColor" d="M9 25.5a6 6 0 0 1-.6-12A8 8 0 0 1 23.6 12a6.8 6.8 0 0 1 .4 13.5z"/><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" opacity=".9"><path d="M11 9c-1.4-1.6 1.4-2.8 0-4.6M16 7.5c-1.4-1.6 1.4-2.8 0-4.6M21 9c-1.4-1.6 1.4-2.8 0-4.6"/></g>',
+  choque:'<path fill="none" stroke="#3fb0ff" stroke-width="2" d="M16 3C12.4 9.8 8 14 8 20a8 8 0 0 0 16 0c0-6-4.4-10.2-8-17z"/><path fill="currentColor" d="M17.3 10.5 11.6 19h3.8l-1.1 6.5 6.2-9.2h-4z"/>',
+  fertilidade:'<g fill="currentColor"><path d="M15.2 29V16h1.8v13z"/><path d="M16.2 17.2C9.5 18 5.8 14 5.5 8.2c6.5-.4 10.4 3 10.7 9z"/><path d="M16.6 14.6c.6-5.7 4-9 10-8.8-.1 5.5-3.6 9-10 8.8z"/></g><path fill="#8a6a46" d="M9 29h14l-2-3H11z"/>',
+  degelo:'<g fill="none" stroke="#9fe8ff" stroke-width="1.8" stroke-linecap="round"><path d="M7 4l3 3 3-3M10 2v8M19 4l3 3 3-3M22 2v8"/></g><path fill="currentColor" d="M16 11c-2.6 5-6 8-6 12.3a6 6 0 0 0 12 0C22 19 18.6 16 16 11z"/>',
+  nevasca:'<path fill="currentColor" d="M9 19a6 6 0 0 1-.6-12A8 8 0 0 1 23.6 5.5 6.8 6.8 0 0 1 24 19z"/><g fill="currentColor"><circle cx="10" cy="23" r="1.6"/><circle cx="16" cy="25" r="1.6"/><circle cx="22" cy="23" r="1.6"/><circle cx="13" cy="28.5" r="1.4"/><circle cx="19.5" cy="29" r="1.4"/></g>',
+  tempestade:'<g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 5h24M6.5 10h19M9.5 15h13M12 20h8M13.5 25h5M15 29.5h2"/></g>'
+};
+const svg = k => `<svg viewBox="0 0 32 32" aria-hidden="true">${ICON[k]}</svg>`;
+
+/* ---------- game data ---------- */
+const ELS = ['fogo','agua','raio','terra','gelo','ar'];
+const META = {
+  fogo:{n:'Fogo',c:'#ff7a3a'}, agua:{n:'Água',c:'#3fb0ff'}, raio:{n:'Raio',c:'#ffd43b'},
+  terra:{n:'Terra',c:'#a8cc6a'}, gelo:{n:'Gelo',c:'#9fe8ff'}, ar:{n:'Ar',c:'#d3dde9'},
+  vapor:{n:'Vapor',c:'#e9f5ff',rx:1,side:'fogo',trig:'agua',acc:['ar','agua']},
+  choque:{n:'Choque',c:'#ffe066',rx:1,side:'agua',trig:'raio',acc:['raio','agua']},
+  fertilidade:{n:'Fertilidade',c:'#7ee08a',rx:1,side:'agua',trig:'terra',acc:['terra','agua']},
+  degelo:{n:'Degelo',c:'#7fdcff',rx:1,side:'fogo',trig:'gelo',acc:['agua','gelo']},
+  nevasca:{n:'Nevasca',c:'#f2f7ff',rx:1,side:'gelo',trig:'ar',acc:['gelo','ar']},
+  tempestade:{n:'Tempestade',c:'#c3b2ff',rx:1,side:'raio',trig:'ar',acc:['raio','ar']}
+};
+const RXS = ['vapor','choque','fertilidade','degelo','nevasca','tempestade'];
+const nm = k => META[k].rx ? META[k].n.toUpperCase() : META[k].n;
+function buildSet(){
+  const s=[]; let id=0;
+  for(let i=0;i<ELS.length;i++) for(let j=i+1;j<ELS.length;j++) s.push({id:id++,a:ELS[i],b:ELS[j],g:'A'});
+  RXS.forEach(r=>s.push({id:id++,a:META[r].side,b:r,g:'B'}));
+  ['fogo','agua','raio','terra','gelo'].forEach(e=>s.push({id:id++,a:e,b:e,g:'C'}));
+  return s;
+}
+const accepts = h => META[h].rx ? META[h].acc : [h];
+function options(p, endHalf){
+  const res=[];
+  [[p.a,p.b],[p.b,p.a]].forEach(([c,o],i)=>{
+    if(i===1 && p.a===p.b) return;
+    if(META[c].rx) return;
+    let ok = accepts(endHalf).includes(c), cat=false;
+    if(!ok && META[o].rx && META[o].side===c && META[o].trig===endHalf){ ok=true; cat=true; }
+    if(ok) res.push({c,o,cat});
+  });
+  return res;
+}
+
+/* ---------- timing ---------- */
+const SPEEDS = {calma:1, rapida:.45};
+let speed = 'calma';
+try{ speed = localStorage.getItem('dx-speed') || 'calma'; if(!SPEEDS[speed]) speed='calma'; }catch(e){}
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const T = ms => ms * SPEEDS[speed];
+const sleep = ms => new Promise(r=>setTimeout(r, T(ms)));
+const buzz = ms => { try{ navigator.vibrate && navigator.vibrate(ms); }catch(e){} };
+
+/* ---------- state ---------- */
+const BOTS = [{n:'Ígnea', icon:'fogo'}, {n:'Maré', icon:'agua'}, {n:'Boreal', icon:'gelo'}];
+let S = null, nChoice = 2, lock = false, GEN = 0;
+const $ = id => document.getElementById(id);
+function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
+
+function newGame(n, name){
+  GEN++;
+  const deck = shuffle(buildSet());
+  const per = n===4 ? 5 : 6;
+  const players = [{name:name||'Jogador', bot:false, hand:[], rx:0, icon:'raio'}];
+  for(let i=0;i<n-1;i++) players.push({name:BOTS[i].n, bot:true, hand:[], rx:0, icon:BOTS[i].icon});
+  players.forEach(p=>{ p.hand = deck.splice(0,per); });
+  const first = deck.shift();
+  S = { players, pile:deck, chain:[{l:first.a, r:first.b, p:first}], turn:0, passes:0, over:false, sel:null, drawn:null, thinking:null, log:[] };
+  addLog(`A peça inicial ${tileName(first)} abre a mesa.`);
+  narrate(`A peça ${tileHTML(first.a,first.b)} abre a mesa. Você começa.`);
+  lock = false;
+  render();
+}
+
+const endHalf = side => side==='L' ? S.chain[0].l : S.chain[S.chain.length-1].r;
+function movesFor(hand, only){
+  const mv=[];
+  hand.forEach(p=>{
+    if(only!=null && p.id!==only) return;
+    ['L','R'].forEach(side=>options(p,endHalf(side)).forEach(o=>mv.push({p,side,...o})));
+  });
+  return mv;
+}
+const tileName = p => `[${META[p.a].n} | ${nm(p.b)}]`;
+function score(mv, hand){
+  let s = mv.cat ? 6 : 0;
+  const acc = accepts(mv.o);
+  hand.forEach(p=>{ if(p.id!==mv.p.id && (acc.includes(p.a)||acc.includes(p.b))) s+=1.2; });
+  if(mv.p.g==='B') s+=1; if(mv.p.a===mv.p.b) s+=.6;
+  return s + Math.random()*.5;
+}
+const best = (mv, hand) => mv.sort((a,b)=>score(b,hand)-score(a,hand))[0];
+
+/* ---------- animation helpers ---------- */
+function rectOf(el){ return el ? el.getBoundingClientRect() : null; }
+async function flyTo(from, targetEl, dur=720){
+  if(!targetEl) return;
+  targetEl.style.visibility='hidden';
+  if(reduced || !from){ targetEl.style.visibility=''; return; }
+  const to = targetEl.getBoundingClientRect();
+  const g = document.createElement('div'); g.className='ghost';
+  g.style.left = to.left+'px'; g.style.top = to.top+'px';
+  const clone = targetEl.cloneNode(true); clone.style.visibility='visible'; clone.style.setProperty('--w', to.width+'px');
+  clone.classList.remove('endL','endR','target');
+  g.appendChild(clone); document.body.appendChild(g);
+  const s = Math.max(.3, from.width / to.width);
+  const dx = from.left + from.width/2 - (to.left + to.width/2);
+  const dy = from.top + from.height/2 - (to.top + to.height/2);
+  const a = g.animate([
+    {transform:`translate(${dx}px,${dy}px) scale(${s}) rotate(${dx>0?8:-8}deg)`},
+    {transform:`translate(${dx*.35}px,${dy*.35 - 40}px) scale(1.18) rotate(${dx>0?3:-3}deg)`, offset:.55},
+    {transform:'translate(0,0) scale(1) rotate(0)'}
+  ], {duration:T(dur), easing:'cubic-bezier(.3,.7,.2,1)'});
+  await a.finished.catch(()=>{});
+  g.remove(); targetEl.style.visibility='';
+  targetEl.classList.remove('settle'); void targetEl.offsetWidth; targetEl.classList.add('settle');
+}
+async function flyBack(from, to, dur=600){
+  if(reduced || !from || !to) return;
+  const g = document.createElement('div'); g.className='ghost';
+  g.innerHTML = `<div class="tile back" style="--w:40px"></div>`;
+  g.style.left = (from.left + from.width/2 - 20)+'px'; g.style.top = (from.top + from.height/2 - 10)+'px';
+  document.body.appendChild(g);
+  const dx = to.left + to.width/2 - (from.left + from.width/2), dy = to.top + to.height/2 - (from.top + from.height/2);
+  await g.animate([{transform:'none', opacity:1},{transform:`translate(${dx/2}px,${dy/2-30}px) scale(1.2) rotate(90deg)`, offset:.5},{transform:`translate(${dx}px,${dy}px) scale(.6) rotate(180deg)`, opacity:.2}], {duration:T(dur), easing:'ease-in-out'}).finished.catch(()=>{});
+  g.remove();
+}
+function burst(el, colors){
+  if(reduced || !el) return;
+  const r = el.getBoundingClientRect(), cx = r.left + r.width/2, cy = r.top + r.height/2;
+  for(let i=0;i<22;i++){
+    const s = document.createElement('span'); s.className='spark';
+    const c = colors[i%colors.length]; s.style.background=c; s.style.boxShadow=`0 0 10px ${c}`;
+    document.body.appendChild(s);
+    const ang = Math.random()*Math.PI*2, d = 50 + Math.random()*90;
+    s.animate([{transform:`translate(${cx}px,${cy}px) scale(1)`, opacity:1},{transform:`translate(${cx+Math.cos(ang)*d}px,${cy+Math.sin(ang)*d}px) scale(.2)`, opacity:0}],
+      {duration:900+Math.random()*500, easing:'cubic-bezier(.1,.8,.3,1)'}).finished.then(()=>s.remove());
+  }
+  const t = $('table'); t.classList.add('glow'); setTimeout(()=>t.classList.remove('glow'), 900);
+}
+function narrate(html, rx=false){
+  const n = $('narr'); n.innerHTML = html; n.classList.toggle('rx', rx);
+  n.classList.remove('in'); void n.offsetWidth; n.classList.add('in');
+}
+let toastTimer;
+function toast(t){ $('toastT').textContent=t; const el=$('toast'); el.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.classList.remove('show'), T(2000)+400); }
+function turnBanner(){ const b=$('turnban'); b.classList.remove('show'); void b.offsetWidth; b.classList.add('show'); buzz(25); }
+
+/* ---------- core actions ---------- */
+async function doPlay(pi, mv, fromRect){
+  const g = GEN, pl = S.players[pi];
+  pl.hand = pl.hand.filter(p=>p.id!==mv.p.id);
+  const t = mv.side==='L' ? {l:mv.o, r:mv.c} : {l:mv.c, r:mv.o};
+  Object.assign(t,{p:mv.p, cat:mv.cat});
+  if(mv.side==='L') S.chain.unshift(t); else S.chain.push(t);
+  S.passes = 0; S.sel=null; S.drawn=null;
+  const where = mv.side==='L' ? 'na ponta esquerda' : 'na ponta direita';
+  render();
+  const el = mv.side==='L' ? $('chain').firstElementChild : $('chain').lastElementChild;
+  await flyTo(fromRect, el);
+  if(g!==GEN) return;
+  buzz(15);
+  if(mv.cat){
+    pl.rx++;
+    const r = META[mv.o];
+    addLog(`${pl.name}: ${META[mv.c].n} + ${META[r.trig].n} → ${nm(mv.o)} ${where}.`, true);
+    narrate(`<b>${pl.name}</b> provocou uma reação: ${chipHTML(mv.c)} + ${chipHTML(r.trig)} → ${chipHTML(mv.o)}`, true);
+    burst(el, [r.c, META[mv.c].c, META[r.trig].c]);
+    toast(`${META[mv.c].n} + ${META[r.trig].n} → ${nm(mv.o)}`);
+    buzz([20,40,30]);
+    render();
+    await sleep(1100);
+  } else {
+    addLog(`${pl.name} ligou ${tileName(mv.p)} ${where}.`);
+    narrate(`<b>${pl.name}</b> ligou ${tileHTML(t.l,t.r)} ${where}.`);
+    render();
+  }
+}
+
+async function nextTurn(){
+  const g = GEN;
+  const winner = S.players.findIndex(p=>p.hand.length===0);
+  if(winner>=0) return finish(winner, false);
+  if(S.passes >= S.players.length && S.pile.length===0) return finish(null, true);
+  S.turn = (S.turn+1) % S.players.length;
+  render();
+  if(S.players[S.turn].bot){ await botTurn(); }
+  else { lock=false; render(); turnBanner(); if(!humanMoves().length && S.pile.length) $('bDraw').classList.add('call'); }
+}
+
+function passTurn(pi, why){
+  S.passes++; S.sel=null; S.drawn=null;
+  addLog(`${S.players[pi].name} passou a vez${why?` (${why})`:''}.`);
+  narrate(`<b>${S.players[pi].name}</b> passou a vez${why?` · ${why}`:''}.`);
+}
+
+const avatarRect = pi => rectOf(document.querySelector(`.rival[data-pi="${pi}"] .avatar`));
+
+async function botTurn(){
+  const g = GEN, pi = S.turn, pl = S.players[pi];
+  lock = true; S.thinking = pi; render();
+  await sleep(1400); if(g!==GEN) return;
+  S.thinking = null;
+  const mv = movesFor(pl.hand);
+  if(mv.length){
+    await doPlay(pi, best(mv, pl.hand), avatarRect(pi)); if(g!==GEN) return;
+    await sleep(800); if(g!==GEN) return;
+    return nextTurn();
+  }
+  if(S.pile.length){
+    const d = S.pile.shift(); pl.hand.push(d);
+    addLog(`${pl.name} comprou uma peça do monte.`);
+    narrate(`<b>${pl.name}</b> não tinha jogada e comprou uma peça.`);
+    await flyBack(rectOf($('pile')), avatarRect(pi)); if(g!==GEN) return;
+    render(); await sleep(900); if(g!==GEN) return;
+    const m2 = movesFor(pl.hand, d.id);
+    if(m2.length){ await doPlay(pi, best(m2, pl.hand), avatarRect(pi)); if(g!==GEN) return; }
+    else passTurn(pi, 'a peça comprada não serviu');
+    render(); await sleep(900); if(g!==GEN) return;
+    return nextTurn();
+  }
+  passTurn(pi, 'monte vazio'); render();
+  await sleep(900); if(g!==GEN) return;
+  nextTurn();
+}
+
+/* ---------- human ---------- */
+const humanMoves = () => S && !S.over ? movesFor(S.players[0].hand, S.drawn) : [];
+const canAct = () => S && !S.over && S.turn===0 && !lock;
+const handEl = id => document.querySelector(`#hand [data-id="${id}"]`);
+const validSides = id => [...new Set(humanMoves().filter(m=>m.p.id===id).map(m=>m.side))];
+
+function selectTile(id){
+  if(!canAct()) return;
+  const sides = validSides(id);
+  if(!sides.length){
+    const el = handEl(id); if(el){ el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
+    $('hint').textContent = 'Essa peça não encaixa em nenhuma ponta agora.'; buzz(40);
+    return;
+  }
+  if(sides.length===1){ playSide(id, sides[0]); return; }
+  S.sel = (S.sel===id) ? null : id; render();
+}
+async function playSide(id, side, fromRect){
+  if(!canAct()) return;
+  const hand = S.players[0].hand;
+  const mv = humanMoves().filter(m=>m.p.id===id && m.side===side);
+  if(!mv.length) return;
+  lock = true; $('bDraw').classList.remove('call');
+  const from = fromRect || rectOf(handEl(id));
+  await doPlay(0, best(mv, hand), from);
+  await sleep(500);
+  nextTurn();
+}
+async function humanDraw(){
+  if(!canAct() || humanMoves().length || S.drawn!=null || !S.pile.length) return;
+  lock = true; $('bDraw').classList.remove('call');
+  const g = GEN;
+  const d = S.pile.shift(); S.players[0].hand.push(d); S.drawn = d.id;
+  addLog(`${S.players[0].name} comprou ${tileName(d)}.`);
+  const pileR = rectOf($('pile'));
+  render();
+  await flyTo(pileR, handEl(d.id), 650); if(g!==GEN) return;
+  if(!movesFor(S.players[0].hand, d.id).length){
+    narrate(`Você comprou ${tileHTML(d.a,d.b)}, mas ela não encaixa. A vez passa.`);
+    await sleep(1500); if(g!==GEN) return;
+    passTurn(0, 'a peça comprada não serviu'); render();
+    await sleep(500); nextTurn();
+  } else {
+    narrate(`Você comprou ${tileHTML(d.a,d.b)} e ela encaixa! Jogue-a ou passe.`);
+    lock = false; render();
+  }
+}
+
+/* drag & drop (works with finger and mouse) */
+let drag = null;
+function markTargets(id, on){
+  const sides = on ? validSides(id) : [];
+  ['L','R'].forEach(s=>{
+    const can = sides.includes(s);
+    $('end'+s).classList.toggle('can', can); $('end'+s).disabled = !can;
+    const t = s==='L' ? $('chain').firstElementChild : $('chain').lastElementChild;
+    if(t) t.classList.toggle('target', can);
+  });
+}
+function dropSide(x, y, id){
+  const sides = validSides(id); if(!sides.length) return null;
+  const hit = document.elementFromPoint(x,y);
+  const z = hit && hit.closest('[data-drop]');
+  if(z && sides.includes(z.dataset.drop)) return z.dataset.drop;
+  const tr = $('table').getBoundingClientRect();
+  if(x<tr.left || x>tr.right || y<tr.top || y>tr.bottom+10) return null;
+  if(sides.length===1) return sides[0];
+  const L = rectOf($('chain').firstElementChild), R = rectOf($('chain').lastElementChild);
+  const d = r => Math.hypot(x-(r.left+r.width/2), y-(r.top+r.height/2));
+  return d(L) <= d(R) ? 'L' : 'R';
+}
+$('hand').addEventListener('pointerdown', e=>{
+  const t = e.target.closest('[data-id]'); if(!t || !canAct()) return;
+  drag = {id:+t.dataset.id, el:t, x0:e.clientX, y0:e.clientY, moved:false, rect:t.getBoundingClientRect(), pid:e.pointerId};
+  try{ t.setPointerCapture(e.pointerId); }catch(_){}
+});
+$('hand').addEventListener('pointermove', e=>{
+  if(!drag || e.pointerId!==drag.pid) return;
+  const dx = e.clientX-drag.x0, dy = e.clientY-drag.y0;
+  if(!drag.moved){
+    if(Math.hypot(dx,dy) < 10) return;
+    if(!validSides(drag.id).length){ return; }
+    drag.moved = true;
+    const g = document.createElement('div'); g.className='ghost';
+    g.style.left = drag.rect.left+'px'; g.style.top = drag.rect.top+'px';
+    const c = drag.el.cloneNode(true); c.classList.remove('ok','sel'); c.style.setProperty('--w', drag.rect.width+'px');
+    g.appendChild(c); document.body.appendChild(g); drag.ghost = g;
+    drag.el.classList.add('lift'); markTargets(drag.id, true); buzz(10);
+  }
+  drag.ghost.style.transform = `translate(${dx}px,${dy}px) scale(1.12) rotate(${Math.max(-12,Math.min(12,dx*.04))}deg)`;
+  const side = dropSide(e.clientX, e.clientY, drag.id);
+  ['L','R'].forEach(s=>$('end'+s).classList.toggle('hot', side===s));
+});
+async function endDrag(e, cancel){
+  if(!drag || e.pointerId!==drag.pid) return;
+  const d = drag; drag = null;
+  ['L','R'].forEach(s=>$('end'+s).classList.remove('hot'));
+  if(!d.moved){ if(!cancel) selectTile(d.id); return; }
+  const side = cancel ? null : dropSide(e.clientX, e.clientY, d.id);
+  const gr = d.ghost.firstElementChild.getBoundingClientRect();
+  if(side){ d.ghost.remove(); playSide(d.id, side, gr); return; }
+  markTargets(d.id, false);
+  await d.ghost.animate([{transform:d.ghost.style.transform},{transform:'none'}], {duration:280, easing:'cubic-bezier(.3,1.3,.5,1)'}).finished.catch(()=>{});
+  d.ghost.remove(); d.el.classList.remove('lift');
+  if(!S.sel) render();
+}
+$('hand').addEventListener('pointerup', e=>endDrag(e,false));
+$('hand').addEventListener('pointercancel', e=>endDrag(e,true));
+
+/* ---------- end ---------- */
+function finish(winner, blocked){
+  S.over = true; lock = false;
+  const order = S.players.map((p,i)=>({...p,i})).sort((a,b)=>a.hand.length-b.hand.length || b.rx-a.rx);
+  const bestN = order[0].hand.length;
+  const winners = blocked ? order.filter(p=>p.hand.length===bestN) : [S.players[winner]];
+  const youWin = winners.some(w=>!w.bot);
+  $('endTitle').textContent = youWin ? (winners.length>1?'Empate na liderança!':'Vitória elemental!') : `${winners.map(w=>w.name).join(' e ')} venceu`;
+  $('endSub').textContent = blocked ? 'A mesa trancou: ninguém tinha jogada e o monte acabou. Vence quem ficou com menos peças.' : `${S.players[winner].name} descartou todas as peças primeiro.`;
+  $('endRank').innerHTML = order.map(p=>`<div class="${winners.some(w=>w.name===p.name)?'win':''}"><span>${p.name}</span><span>${p.hand.length} peça${p.hand.length===1?'':'s'} · ${p.rx} reaç${p.rx===1?'ão':'ões'}</span></div>`).join('');
+  addLog(blocked ? 'Mesa trancada. Fim de partida.' : `${S.players[winner].name} venceu a partida!`, true);
+  narrate(blocked ? 'A mesa trancou. Fim de partida.' : `<b>${S.players[winner].name}</b> esvaziou a mão e venceu!`, true);
+  if(youWin){ burst($('hand'), ['#ffe7b0','#ff7a3a','#3fb0ff','#ffd43b','#7ee08a']); buzz([30,60,30,60,80]); }
+  render();
+  setTimeout(()=>open('mEnd'), 1100);
+}
+
+/* ---------- render ---------- */
+function tileHTML(l, r, cls='', extra=''){
+  const half = k => `<span class="half${META[k].rx?' rx':''}" style="--c:${META[k].c}">${svg(k)}${META[k].rx?`<b>${META[k].n.toUpperCase()}</b>`:''}</span>`;
+  const tag = extra.includes('data-id') ? 'button' : 'div';
+  return `<${tag} class="tile ${cls}" ${extra} aria-label="Peça ${META[l].n} e ${META[r].n}">${half(l)}<span class="sep"></span>${half(r)}</${tag}>`;
+}
+const chipHTML = k => `<span class="chip${META[k].rx?' rxc':''}" style="--c:${META[k].c}">${svg(k)}${nm(k)}</span>`;
+function endHTML(h){
+  return META[h].rx ? `${chipHTML(h)}<span class="arrow">aceita</span>${META[h].acc.map(chipHTML).join('')}` : chipHTML(h);
+}
+
+function render(){
+  if(!S) return;
+  const me = S.players[0], myTurn = canAct();
+  $('rivals').classList.toggle('many', S.players.length>3);
+  $('rivals').innerHTML = S.players.slice(1).map((p,k)=>{
+    const i=k+1, act = S.turn===i && !S.over;
+    const sub = S.thinking===i ? '<span class="dots">pensando<i>.</i><i>.</i><i>.</i></span>' : act ? '<span class="dots">jogando</span>' : `${p.rx} reaç${p.rx===1?'ão':'ões'}`;
+    return `<div class="rival ${act?'active':''}" data-pi="${i}"><div class="avatar" style="--c:${META[p.icon].c}">${svg(p.icon)}<span class="cnt">${p.hand.length}</span></div>
+      <div class="meta"><span class="nm">${p.name}</span><span class="sub">${sub}</span></div></div>`;
+  }).join('');
+  const last = S.chain.length-1;
+  $('chain').innerHTML = S.chain.map((t,i)=>tileHTML(t.l, t.r, `board ${i===0?'endL':''} ${i===last?'endR':''} ${t.cat?'cat':''}`, i===0?'data-drop="L"':(i===last?'data-drop="R"':''))).join('');
+  if(S.chain.length===1) $('chain').firstElementChild.removeAttribute('data-drop');
+  const mv = myTurn ? humanMoves() : [];
+  const selMv = S.sel!=null ? mv.filter(m=>m.p.id===S.sel) : [];
+  ['L','R'].forEach(side=>{
+    $('acc'+side).innerHTML = endHTML(endHalf(side));
+    const can = selMv.some(m=>m.side===side), el = $('end'+side);
+    el.classList.toggle('can', can); el.disabled = !can;
+    const t = side==='L' ? $('chain').firstElementChild : $('chain').lastElementChild;
+    if(can && t) t.classList.add('target');
+  });
+  $('pileN').textContent = `${S.pile.length} no monte`;
+  let st, hint='';
+  if(S.over) st='Partida encerrada';
+  else if(S.turn===0){
+    st = `Sua vez, ${me.name}`;
+    if(lock) hint='';
+    else if(S.sel!=null) hint='Encaixa nas duas pontas: toque na ponta verde que preferir.';
+    else if(mv.length) hint = S.drawn!=null ? 'A peça comprada encaixa: jogue-a ou passe.' : 'Arraste uma peça verde até a mesa, ou toque nela.';
+    else hint = S.pile.length ? 'Nenhuma peça encaixa. Compre do monte.' : 'Nenhuma jogada e o monte acabou. Passe a vez.';
+  } else st = `Vez de ${S.players[S.turn].name}`;
+  $('status').textContent = st; $('hint').textContent = hint;
+  $('handTitle').textContent = `Sua mão · ${me.hand.length}`;
+  const playable = new Set(mv.map(m=>m.p.id));
+  $('hand').innerHTML = me.hand.map(p=>{
+    const ok = playable.has(p.id);
+    const cls = !myTurn ? 'dim' : ok ? 'ok' : 'dim';
+    const catAvail = mv.some(m=>m.p.id===p.id && m.cat);
+    return tileHTML(p.a, p.b, `${cls} ${S.sel===p.id?'sel':''}`, `data-id="${p.id}"`).replace(/<\/button>$/, `${catAvail?'<span class="tag">Reação!</span>':''}</button>`);
+  }).join('');
+  $('bDraw').disabled = !(myTurn && !mv.length && S.drawn==null && S.pile.length);
+  if($('bDraw').disabled) $('bDraw').classList.remove('call');
+  $('bPass').disabled = !(myTurn && ((S.drawn!=null) || (!mv.length && !S.pile.length)));
+  $('bPass').classList.toggle('call', !$('bPass').disabled && S.drawn==null);
+  $('log').innerHTML = S.log.slice().reverse().map(l=>`<li class="${l.rx?'rx':''}">${l.t}</li>`).join('');
+}
+function addLog(t, rx=false){ S.log.push({t,rx}); if(S.log.length>80) S.log.shift(); }
+
+/* ---------- modals & controls ---------- */
+function open(id){ $(id).hidden=false; }
+document.addEventListener('click', e=>{
+  const c = e.target.closest('[data-close]'); if(c){ c.closest('.modal').hidden=true; return; }
+  const o = e.target.closest('[data-open]'); if(o){ open(o.dataset.open); return; }
+  if(e.target.classList.contains('modal') && (e.target.id!=='mSetup' || S.started)) e.target.hidden=true;
+});
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') document.querySelectorAll('.modal').forEach(m=>{ if(m.id!=='mSetup'||S.started) m.hidden=true; }); });
+$('endL').addEventListener('click', ()=>S.sel!=null && playSide(S.sel,'L'));
+$('endR').addEventListener('click', ()=>S.sel!=null && playSide(S.sel,'R'));
+$('bDraw').addEventListener('click', humanDraw);
+$('bPass').addEventListener('click', async ()=>{
+  if(!canAct()) return; lock = true;
+  passTurn(0, S.drawn!=null ? 'guardou a peça comprada' : 'monte vazio'); render();
+  await sleep(600); nextTurn();
+});
+$('bRules').addEventListener('click', ()=>open('mRules'));
+$('bPieces').addEventListener('click', ()=>open('mPieces'));
+$('bNew').addEventListener('click', ()=>open('mSetup'));
+$('segN').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; nChoice=+b.dataset.n; [...$('segN').children].forEach(x=>x.setAttribute('aria-pressed', x===b)); });
+$('speed').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; speed=b.dataset.s; try{localStorage.setItem('dx-speed',speed);}catch(_){} syncSpeed(); });
+function syncSpeed(){ [...$('speed').children].forEach(x=>x.setAttribute('aria-pressed', x.dataset.s===speed)); }
+function start(){
+  document.querySelectorAll('.modal').forEach(m=>m.hidden=true);
+  newGame(nChoice, $('iName').value.trim()); S.started = true;
+  setTimeout(()=>{ if(S && S.turn===0) turnBanner(); }, 300);
+}
+$('bStart').addEventListener('click', start);
+$('bAgain').addEventListener('click', start);
+
+/* ---------- static content ---------- */
+const SET = buildSet();
+['A','B','C'].forEach(g=>{
+  $('cat'+g).innerHTML = SET.filter(p=>p.g===g).map(p=>`<div class="it">${tileHTML(p.a,p.b)}<span>${META[p.a].n} | ${nm(p.b)}</span></div>`).join('');
+});
+$('rxTable').innerHTML = RXS.map(r=>{
+  const m=META[r];
+  return `<div class="rxrow">${tileHTML(m.side,r)}<span>Ligue o lado <b>${META[m.side].n}</b> numa ponta <b>${META[m.trig].n}</b>: a ponta vira <b>${nm(r)}</b>, que aceita ${m.acc.map(a=>META[a].n).join(' ou ')}.</span></div>`;
+}).join('');
+
+syncSpeed();
+newGame(2, 'Jogador');
+$('mSetup').hidden=false;
+</script>
+</body>
+</html>
